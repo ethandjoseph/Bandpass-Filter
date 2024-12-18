@@ -11,7 +11,7 @@ JUCE 8 project consisting of
 1. Frequency control
 2. Resonance control
 
-## [Release](https://github.com/ethandjoseph/LowPass-Filter/releases)
+## [Release](https://github.com/ethandjoseph/Bandpass-Filter/releases)
 - VST3
 - 64 bit
 
