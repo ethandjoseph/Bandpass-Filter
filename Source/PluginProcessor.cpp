@@ -1,7 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
 BandpassFilterAudioProcessor::BandpassFilterAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
@@ -11,7 +10,8 @@ BandpassFilterAudioProcessor::BandpassFilterAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
+    apvts(*this, nullptr, "Parameters", createParameterLayout())
 #endif
 {
 }
@@ -20,7 +20,6 @@ BandpassFilterAudioProcessor::~BandpassFilterAudioProcessor()
 {
 }
 
-//==============================================================================
 const juce::String BandpassFilterAudioProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -60,8 +59,7 @@ double BandpassFilterAudioProcessor::getTailLengthSeconds() const
 
 int BandpassFilterAudioProcessor::getNumPrograms()
 {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    return 1;
 }
 
 int BandpassFilterAudioProcessor::getCurrentProgram()
@@ -82,17 +80,19 @@ void BandpassFilterAudioProcessor::changeProgramName (int index, const juce::Str
 {
 }
 
-//==============================================================================
 void BandpassFilterAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    juce::dsp::ProcessSpec spec;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.sampleRate = sampleRate;
+    spec.numChannels = getTotalNumOutputChannels();
+    bandPassFilter.prepare(spec);
+    bandPassFilter.reset();
+    bandPassFilter.setType(juce::dsp::StateVariableTPTFilterType::bandpass);
 }
 
 void BandpassFilterAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -102,15 +102,10 @@ bool BandpassFilterAudioProcessor::isBusesLayoutSupported (const BusesLayout& la
     juce::ignoreUnused (layouts);
     return true;
   #else
-    // This is the place where you check if the layout is supported.
-    // In this template code we only support mono or stereo.
-    // Some plugin hosts, such as certain GarageBand versions, will only
-    // load plugins that support stereo bus layouts.
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
      && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-    // This checks if the input layout matches the output layout
    #if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
@@ -121,6 +116,7 @@ bool BandpassFilterAudioProcessor::isBusesLayoutSupported (const BusesLayout& la
 }
 #endif
 
+// Process Block ==============================================================================
 void BandpassFilterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -129,14 +125,20 @@ void BandpassFilterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    float frequency = apvts.getRawParameterValue("FREQUENCY")->load();
+    float bandwidth = apvts.getRawParameterValue("R")->load();
 
-
+    bandPassFilter.setCutoffFrequency(frequency);
+    bandPassFilter.setResonance(bandwidth);
+    auto audioBlock = juce::dsp::AudioBlock<float>(buffer);
+    auto context = juce::dsp::ProcessContextReplacing<float>(audioBlock);
+    bandPassFilter.process(context);
 }
-
 //==============================================================================
+
 bool BandpassFilterAudioProcessor::hasEditor() const
 {
-    return true; // (change this to false if you choose to not supply an editor)
+    return true;
 }
 
 juce::AudioProcessorEditor* BandpassFilterAudioProcessor::createEditor()
@@ -144,22 +146,41 @@ juce::AudioProcessorEditor* BandpassFilterAudioProcessor::createEditor()
     return new BandpassFilterAudioProcessorEditor (*this);
 }
 
-//==============================================================================
 void BandpassFilterAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
 }
 
 void BandpassFilterAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
 }
 
-//==============================================================================
-// This creates new instances of the plugin..
+juce::AudioProcessorValueTreeState::ParameterLayout BandpassFilterAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "FREQUENCY",               // Parameter ID
+        "Centre Frequency",        // Parameter name
+        juce::NormalisableRange{
+                    20.f,          // rangeStart
+                    20000.f,       // rangeEnd
+                    0.1f,          // intervalValue
+                    0.2f,          // skewFactor
+                    false },       // useSymmetricSkew
+                    -12.0f         // Default value
+                    ));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "R",                // Parameter ID
+        "Resonance",        // Parameter name
+        0.707f,             // minValue
+        1.000f,             // maxValue
+        0.707f              // Default value
+    ));
+
+    return { params.begin(), params.end() };
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new BandpassFilterAudioProcessor();
