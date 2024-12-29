@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="yTdHIA" name="Bandpass Filter" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Owninstrument"
-              companyWebsite="owninstrument.io" pluginFormats="buildStandalone,buildVST3">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="Earth Mover DSP"
+              companyWebsite="www.EarthMoverDSP.com" pluginFormats="buildAAX,buildAU,buildAUv3,buildLV2,buildStandalone,buildVST3"
+              pluginManufacturerCode="EDSP" pluginCode="JBPF" pluginVST3Category="EQ,Filter,Fx"
+              pluginAAXCategory="1,8192" lv2Uri="http://earthmoverdsp.com/plugins/Bandpass_Filter">
   <MAINGROUP id="SFNm7Z" name="Bandpass Filter">
     <GROUP id="{52A211D0-CADF-1613-2353-8FC33A476C52}" name="Source">
       <FILE id="ZYNy6l" name="PluginProcessor.cpp" compile="1" resource="0"
