@@ -174,7 +174,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BandpassFilterAudioProcessor
         "R",                // Parameter ID
         "Resonance",        // Parameter name
         0.707f,             // minValue
-        1.000f,             // maxValue
+        4.000f,             // maxValue
         0.707f              // Default value
     ));
 
